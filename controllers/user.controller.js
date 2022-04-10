@@ -2,11 +2,18 @@ const {response, request} = require('express');
 const bcryptjs = require('bcryptjs');
 const Usuario = require('../models/usuario');
 
-const getUsuario = (req, res=response)=>{
-    const {nombre="no name"} = req.query;    
+const getUsuario = async(req, res=response)=>{
+    const {limite = 5, desde = 0} = req.query;
+
+    const [total, usuarios] = await Promise.all([
+        Usuario.countDocuments({estado:true}),
+        Usuario.find({estado:true})
+            .skip(Number(desde))
+            .limit(Number(limite))
+    ])
     res.json({
-        msg: 'get API - Controlador',
-        nombre
+        total,
+        usuarios
     });
 }
 
@@ -27,12 +34,20 @@ const postUsuario = async(req, res=response)=>{
     });
 }
 
-const putUsuario = (req, res=response)=>{
+const putUsuario = async(req, res=response)=>{
     const {id} = req.params;
-    res.json({
-        msg: 'put API - Controlador',
-        id
-    });
+    const {password, google, correo, ...resto} = req.body;
+
+    //TODO validar contra base de datos
+    if(password){
+        //Encriptar la contraseña
+        const salt = bcryptjs.genSaltSync();
+        resto.password = bcryptjs.hashSync(password, salt);
+    }
+
+    const usuario = await Usuario.findByIdAndUpdate(id, resto);
+
+    res.json(usuario);
 }
 
 const patchUsuario = (req, res=response)=>{
@@ -41,9 +56,13 @@ const patchUsuario = (req, res=response)=>{
     });
 }
 
-const deleteUsuario = (req, res=response)=>{
+const deleteUsuario = async(req, res=response)=>{
+    const {id} = req.params;
+    const usuario = await Usuario.findByIdAndUpdate(id, {estado:false})
     res.json({
-        msg: 'delete API - Controlador'
+        msg: 'delete API - Controlador',
+        id,
+        usuario
     });
 }
 
